@@ -1,0 +1,21 @@
+package com.google.input;
+
+import com.google.utils.googleUtil;
+
+public class CloseRequest {
+	private String state = "3";
+	private String closeNotes = String.format("Successfully Processed by Automation on %s.", googleUtil.getCurrentDateTime());
+	// private String workNotes = String.format("Closed automatically by ISIM on
+	// %s.", googleUtil.getCurrentDateTime());
+	private String comments = String.format("Successfully Processed by Automation %s.", googleUtil.getCurrentDateTime());
+	private String assignedTo;
+
+	public String getAssignedTo() {
+		return assignedTo;
+	}
+
+	public void setAssignedTo(String assignedTo) {
+		this.assignedTo = assignedTo;
+	}
+
+}
