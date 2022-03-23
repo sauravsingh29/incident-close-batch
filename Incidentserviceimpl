@@ -1,0 +1,123 @@
+package com.google.service;
+
+import static com.google.utils.googleUtil.getProperty;
+import static com.google.utils.googleUtil.okHttpClient;
+import static com.google.gson.FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import com.google.input.CloseRequest;
+import com.google.input.IncidentRequest;
+import com.google.response.GetSysIdResponse;
+import com.google.response.Result;
+import com.google.utils.googleUtil;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+
+public class IncidentServiceImpl implements IncidentService {
+
+	private static final Logger logger = LogManager.getLogger(IncidentService.class);
+	private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+	private static final Gson gson = new GsonBuilder().disableHtmlEscaping()
+			.setFieldNamingPolicy(LOWER_CASE_WITH_UNDERSCORES).create();
+
+	@Override
+	public GetSysIdResponse getSysId(IncidentRequest request) {
+		logger.debug("Started method getSysId for input {}.", request);
+		OkHttpClient client = okHttpClient();
+		String number = request.getNumber();
+		final String sysIdUrl = getSysIdUrl(request.getType(), number);
+		GetSysIdResponse sysIdResponse = null;
+		if (StringUtils.isNoneEmpty(sysIdUrl)) {
+			sysIdResponse = getSysIdResponseWithRetry(number, sysIdUrl, 1, client);
+		}
+		return sysIdResponse;
+	}
+
+	private GetSysIdResponse getSysIdResponseWithRetry(String number, String url, int retryCount,
+			final OkHttpClient client) {
+		Request request = new Request.Builder().url(url).build();
+		try {
+			Response execute = client.newCall(request).execute();
+			if (execute.isSuccessful() && null != execute.body()) {
+				logger.debug("Finished method getSysId for task number {}.", number);
+				return gson.fromJson(execute.body().string(), GetSysIdResponse.class);
+			}
+			if (execute.code() == 401 && retryCount <= 3) {
+				logger.debug("Retrying again. Retry count {}.", retryCount);
+				return getSysIdResponseWithRetry(number, url, retryCount + 1, client);
+			}
+		} catch (Exception e) {
+			logger.error("Failed to make GetSysId call for sc task number {}.", number, e);
+		}
+		return null;
+	}
+
+	@Override
+	public boolean closeTask(IncidentRequest input, GetSysIdResponse sysIdInfo) {
+		logger.debug("Started method getSysId for task number {}.", sysIdInfo);
+		if (sysIdInfo.getResult() == null || sysIdInfo.getResult().size() < 0) {
+			logger.error("Can't close the input {} because no sys_id information found.", input);
+			return false;
+		}
+		Result result = sysIdInfo.getResult().get(0);
+		String sysId = result.getSysId();
+		String number = input.getNumber();
+		String closeUrl = getCloseUrl(input.getType(), sysId);
+		if (StringUtils.isNoneBlank(closeUrl)) {
+			try {
+				OkHttpClient client = okHttpClient();
+				CloseRequest closeRequest = new CloseRequest();
+				closeRequest.setAssignedTo(getProperty("service-now.user.sys_id"));
+				RequestBody body = RequestBody.create(JSON, gson.toJson(closeRequest));
+				Request request = new Request.Builder().url(closeUrl).put(body).build();
+				Response response = client.newCall(request).execute();
+				if (response.isSuccessful()) {
+					logger.debug("Number = {} & sys_id = {} has been closed successfully.", number, sysId);
+					return true;
+				} else {
+					if (response.code() == 403) {
+						logger.info("SC_TASK =[ {} ] already closed.", number);
+						return true;
+					} else {
+						logger.error("Failed to close Number = {} & sys_id = {}. Response code = {}, error = {}",
+								number, sysId, response.code(), response.message());
+						return false;
+					}
+				}
+			} catch (Exception e) {
+				logger.error("Failed to put sc task {} & sys_id {} close input.", number, sysId, e);
+				return false;
+			}
+		}
+		return false;
+	}
+
+	private String getSysIdUrl(final String type, final String number) {
+		if (type.equalsIgnoreCase(googleUtil.RITM)) {
+			return getProperty("sc-req-item.sys-id.url") + number;
+		}
+		if (type.equalsIgnoreCase(googleUtil.SC_TASK)) {
+			return getProperty("sc-task.sys-id.url") + number;
+		}
+		return null;
+	}
+
+	private String getCloseUrl(final String type, final String sysId) {
+		if (type.equalsIgnoreCase(googleUtil.RITM)) {
+			return getProperty("sc-req-item.close.url") + sysId;
+		}
+		if (type.equalsIgnoreCase(googleUtil.SC_TASK)) {
+			return getProperty("sc-task.close.url") + sysId;
+		}
+		return null;
+	}
+}
