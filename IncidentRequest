@@ -1,0 +1,27 @@
+package com.google.input;
+
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
+
+public class IncidentRequest {
+	private String number;
+	private String type;
+
+	public IncidentRequest(String number, String type) {
+		this.number = number;
+		this.type = type;
+	}
+
+	public String getNumber() {
+		return number;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	@Override
+	public String toString() {
+		return ReflectionToStringBuilder.toString(this, ToStringStyle.JSON_STYLE);
+	}
+}
