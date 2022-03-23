@@ -1,0 +1,40 @@
+package com.google.processor;
+
+import java.io.File;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import com.google.input.IncidentRequest;
+import com.google.response.GetSysIdResponse;
+import com.google.service.IncidentService;
+import com.google.service.IncidentServiceImpl;
+import com.google.utils.googleUtil;
+
+public class IncidentProcessor {
+
+	private static final Logger logger = LogManager.getLogger(IncidentProcessor.class);
+
+	private static final IncidentService service = new IncidentServiceImpl();
+
+	public void process(final IncidentRequest request, final File csvFile, final File archiveDirectory,
+			final File failedDirectory) {
+		logger.debug("Processing sc_task request {}. ", request);
+		String scTaskNumber = request.getNumber();
+		GetSysIdResponse sysIdResponse = service.getSysId(request);
+		if (null == sysIdResponse) {
+			logger.warn("Unable to get sys_id from service now. Can't proceed for input {}. Moving file to {}.",
+					request, failedDirectory.getName());
+			googleUtil.moveFile(csvFile, failedDirectory);
+			return;
+		}
+		boolean taskClosed = service.closeTask(request, sysIdResponse);
+		if (taskClosed) {
+			logger.info("sc_task {} closed successfully. Moving file to {}.", scTaskNumber, archiveDirectory.getName());
+			googleUtil.moveFile(csvFile, archiveDirectory);
+		} else {
+			logger.error("Failed to close sc_task {}. Moving file to {}.", scTaskNumber, failedDirectory.getName());
+			googleUtil.moveFile(csvFile, failedDirectory);
+		}
+	}
+}
