@@ -1,0 +1,51 @@
+package com.cigna;
+
+import static com.google.utils.googleUtil.getProperty;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import com.google.input.IncidentRequest;
+import com.google.processor.IncidentProcessor;
+import com.google.utils.googleUtil;
+
+/**
+ * Incident Closer Executor
+ */
+public class IncidentCloserExecutor {
+	private static final Logger logger = LogManager.getLogger(IncidentCloserExecutor.class);
+
+	public static void main(String[] args) {
+		try {
+			long start = System.currentTimeMillis();
+			String inputLocation = getProperty("input.file.location");
+			File failedDirectory = new File(getProperty("failed.file.location"));
+			File archiveDirectory = new File(getProperty("success.file.location"));
+			logger.info("Step 1 --> Listing files from location: {}.", inputLocation);
+			List<File> csvFiles = new ArrayList<>(googleUtil.getFiles(inputLocation));
+			logger.info("Step 2 --> Total files to be processed: {}.", csvFiles.size());
+			IncidentProcessor processor = new IncidentProcessor();
+			int loopSize = Math.min(100, csvFiles.size());
+			for (int i = 0; i < loopSize; i++) {
+				File csvFile = csvFiles.get(i);
+				logger.info("Processing file {}.", csvFile);
+				IncidentRequest incidentRequest = googleUtil.readFile(csvFile);
+				if (null != incidentRequest) {
+					logger.info("Processing data {}.", incidentRequest);
+					processor.process(incidentRequest, csvFile, archiveDirectory, failedDirectory);
+				}
+			}
+			long end = System.currentTimeMillis();
+			long diffLong = end - start;
+			int seconds = (int) (diffLong / 1000) % 60;
+			int minutes = (int) ((diffLong / (1000 * 60)) % 60);
+			logger.info("Finished processing. Time taken Minutes {}, Seconds {}.", minutes, seconds);
+		} catch (Exception e) {
+			logger.error("Failed to process incident closour. Exception :: ", e);
+		}
+	}
+}
