@@ -1,0 +1,179 @@
+package com.google.input;
+
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
+
+import com.opencsv.bean.CsvBindByPosition;
+
+public class Incident {
+
+	@CsvBindByPosition(position = 0)
+	private String scTaskNumber;
+
+	@CsvBindByPosition(position = 1)
+	private String status;
+
+	@CsvBindByPosition(position = 2)
+	private String appliedTo;
+
+	@CsvBindByPosition(position = 3)
+	private String ritmNumber;
+
+	@CsvBindByPosition(position = 4)
+	private String amRequestNumber;
+
+	@CsvBindByPosition(position = 5)
+	private String employeeId;
+
+	@CsvBindByPosition(position = 6)
+	private String userOperation;
+
+	@CsvBindByPosition(position = 7)
+	private String requestOperation;
+
+	@CsvBindByPosition(position = 8)
+	private int number;
+
+	@CsvBindByPosition(position = 9)
+	private String attributes;
+
+	@CsvBindByPosition(position = 10)
+	private String group;
+
+	@CsvBindByPosition(position = 11)
+	private String csNumber;
+
+	@CsvBindByPosition(position = 12)
+	private String scNumber;
+
+	@CsvBindByPosition(position = 13)
+	private String state;
+
+	@CsvBindByPosition(position = 14)
+	private String code;
+
+	public String getScTaskNumber() {
+		return scTaskNumber;
+	}
+
+	public void setScTaskNumber(String scTaskNumber) {
+		this.scTaskNumber = scTaskNumber;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
+	}
+
+	public String getAppliedTo() {
+		return appliedTo;
+	}
+
+	public void setAppliedTo(String appliedTo) {
+		this.appliedTo = appliedTo;
+	}
+
+	public String getRitmNumber() {
+		return ritmNumber;
+	}
+
+	public void setRitmNumber(String ritmNumber) {
+		this.ritmNumber = ritmNumber;
+	}
+
+	public String getAmRequestNumber() {
+		return amRequestNumber;
+	}
+
+	public void setAmRequestNumber(String amRequestNumber) {
+		this.amRequestNumber = amRequestNumber;
+	}
+
+	public String getEmployeeId() {
+		return employeeId;
+	}
+
+	public void setEmployeeId(String employeeId) {
+		this.employeeId = employeeId;
+	}
+
+	public String getUserOperation() {
+		return userOperation;
+	}
+
+	public void setUserOperation(String userOperation) {
+		this.userOperation = userOperation;
+	}
+
+	public String getRequestOperation() {
+		return requestOperation;
+	}
+
+	public void setRequestOperation(String requestOperation) {
+		this.requestOperation = requestOperation;
+	}
+
+	public int getNumber() {
+		return number;
+	}
+
+	public void setNumber(int number) {
+		this.number = number;
+	}
+
+	public String getAttributes() {
+		return attributes;
+	}
+
+	public void setAttributes(String attributes) {
+		this.attributes = attributes;
+	}
+
+	public String getGroup() {
+		return group;
+	}
+
+	public void setGroup(String group) {
+		this.group = group;
+	}
+
+	public String getCsNumber() {
+		return csNumber;
+	}
+
+	public void setCsNumber(String csNumber) {
+		this.csNumber = csNumber;
+	}
+
+	public String getScNumber() {
+		return scNumber;
+	}
+
+	public void setScNumber(String scNumber) {
+		this.scNumber = scNumber;
+	}
+
+	public String getState() {
+		return state;
+	}
+
+	public void setState(String state) {
+		this.state = state;
+	}
+
+	public String getCode() {
+		return code;
+	}
+
+	public void setCode(String code) {
+		this.code = code;
+	}
+
+	@Override
+	public String toString() {
+		return ReflectionToStringBuilder.toString(this, ToStringStyle.JSON_STYLE);
+	}
+}
