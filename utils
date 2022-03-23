@@ -1,0 +1,165 @@
+package com.google.utils;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.io.FileExistsException;
+import org.apache.commons.io.FileUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import com.google.input.Incident;
+import com.google.input.IncidentRequest;
+import com.opencsv.CSVReader;
+import com.opencsv.bean.CsvToBeanBuilder;
+
+import okhttp3.Credentials;
+import okhttp3.Interceptor;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+
+public final class googleUtil {
+
+	private static final Logger logger = LogManager.getLogger(googleUtil.class);
+
+	public static final String RITM = "RITM";
+	public static final String SC_TASK = "SC_TASK";
+
+	private static Object _lock = new Object();
+
+	private static Properties properties;
+
+	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
+
+	private static OkHttpClient client;
+
+	static {
+		if (null == properties) {
+			try {
+				properties = new Properties();
+				properties.load(googleUtil.class.getResourceAsStream("/application.properties"));
+				logger.debug("Loaded initial properties:: {}", properties);
+			} catch (IOException e) {
+				logger.error("Failed to load properties file. Can't proceed.", e);
+				System.exit(1);
+			}
+		}
+	}
+
+	public static List<File> getFiles(final String inputLocation) {
+		Collection<File> inputFiles = FileUtils.listFiles(new File(inputLocation), null, false);
+		List<File> successPendingFiles = new ArrayList<>(0);
+		for (File f : inputFiles) {
+			
+			if (f.getName().startsWith("success-pending")) {
+				successPendingFiles.add(f);
+			}
+		}
+		return successPendingFiles;
+	}
+
+	public static void moveFile(File source, File destination) {
+		try {
+			FileUtils.moveFileToDirectory(source, destination, false);
+		}
+		// remove from here if not needed.
+		catch (FileExistsException fe) {
+		new File(destination + File.separator + source.getName()).delete();
+		logger.debug("File {} already exists in directory {}. Deleting to copy same file name from input.",source.getName(), destination.getName());
+		moveFile(source, destination);
+		 }
+		// end
+		catch (IOException e) {
+			logger.error("Failed to move file from location {} to {}.", source, destination, e);
+		}
+	}
+
+	public static List<Incident> readCSVFile(final File source) {
+		try {
+			return new CsvToBeanBuilder<Incident>(new FileReader(source)).withType(Incident.class).build().parse();
+		} catch (FileNotFoundException e) {
+			logger.error("Input CSV File {} not found. Exception:: ", source, e);
+			return Collections.emptyList();
+		}
+	}
+
+	public static IncidentRequest readFile(final File input) {
+		FileReader fileReader = null;
+		CSVReader csvReader = null;
+		try {
+			fileReader = new FileReader(input);
+			csvReader = new CSVReader(fileReader);
+			String[] inputs = csvReader.readNext();
+			if (null != inputs && inputs.length > 0) {
+				String firstColumn = inputs[0];
+				if (firstColumn.equalsIgnoreCase("Account")) {
+					return new IncidentRequest(inputs[1], RITM);
+				}
+				if (firstColumn.startsWith("SCTASK")) {
+					return new IncidentRequest(firstColumn, SC_TASK);
+				}
+				logger.warn("Unsupported file content starts with {} for input file {}. Skipping", firstColumn,
+						input.getName());
+			}
+		} catch (Exception e) {
+			logger.error("Failed to read input {}.", input.getName(), e);
+		} finally {
+			try {
+				fileReader.close();
+				csvReader.close();
+			} catch (IOException e) {
+				// do nothing.
+			}
+		}
+		return null;
+	}
+
+	public static String getProperty(String key) {
+		return properties.getProperty(key);
+	}
+
+	public static OkHttpClient okHttpClient() {
+		if (client == null) {
+			synchronized (_lock) {
+				if (null == client)
+					client = new OkHttpClient.Builder()
+							.addInterceptor(new BasicAuthInterceptor(getProperty("service-now.user"),
+									getProperty("service-now.password")))
+							.callTimeout(60, TimeUnit.SECONDS).connectTimeout(90, TimeUnit.SECONDS).build();
+			}
+		}
+		return client;
+	}
+
+	public static String getCurrentDateTime() {
+		return DATE_FORMAT.format(new Date());
+	}
+
+	public static class BasicAuthInterceptor implements Interceptor {
+
+		private String credentials;
+
+		public BasicAuthInterceptor(String user, String password) {
+			this.credentials = Credentials.basic(user, password);
+		}
+
+		@Override
+		public Response intercept(Chain chain) throws IOException {
+			Request request = chain.request();
+			Request authenticatedRequest = request.newBuilder().header("Authorization", credentials).build();
+			return chain.proceed(authenticatedRequest);
+		}
+
+	}
+}
