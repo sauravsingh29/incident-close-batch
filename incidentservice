@@ -1,0 +1,11 @@
+package com.google.service;
+
+import com.google.input.IncidentRequest;
+import com.google.response.GetSysIdResponse;
+
+public interface IncidentService {
+
+	GetSysIdResponse getSysId(final IncidentRequest request);
+
+	boolean closeTask(final IncidentRequest request, final GetSysIdResponse sysIdResponse);
+}
